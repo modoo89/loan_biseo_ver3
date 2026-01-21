@@ -243,18 +243,23 @@ app.post('/api/issue', async (req, res) => {
 app.post('/api/analyze', async (req, res) => {
     try {
         let { registryData, userInputs } = req.body;
-        // 면적 보정 로직: registryData가 객체인 경우와 배열인 경우 대응
+        
+        // 면적 보정 로직 (배열/객체 대응)
         const correctArea = extractExclusiveArea(Array.isArray(registryData) ? registryData : []);
         if (correctArea) userInputs.area = correctArea;
 
+        // [핵심 수정] AI에게 시스템 지침(System Instruction)의 템플릿을 강제함
         const prompt = `
-            [데이터 스냅샷]
-            KB시세: ${userInputs.kbPrice}만원
-            전용면적: ${userInputs.area}㎡
-            기대출 상세: ${JSON.stringify(userInputs.loans)}
-            등기부 데이터 요약: ${JSON.stringify(registryData).substring(0, 8000)}
+            사용자가 입력한 아래 데이터를 바탕으로, 
+            반드시 시스템 지침(System Instruction)에 정의된 [최종 리포트 템플릿] 양식과 
+            구분선(────────────────────────), 줄바꿈 규칙을 사진 찍듯이 똑같이 복사하여 작성하십시오.
+            다른 설명이나 요약 문구는 일절 추가하지 마십시오.
 
-            위 데이터를 바탕으로 시스템 지침에 따라 가독성 좋은 대출 리포트를 작성하라.
+            [데이터 데이터]
+            - KB시세: ${userInputs.kbPrice}만원
+            - 전용면적: ${userInputs.area}㎡
+            - 기대출 상세: ${JSON.stringify(userInputs.loans)}
+            - 등기부 데이터: ${JSON.stringify(registryData).substring(0, 8000)}
         `;
 
         const result = await model.generateContent(prompt);

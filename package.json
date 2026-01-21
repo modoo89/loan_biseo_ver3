@@ -1,0 +1,16 @@
+{
+  "name": "loan-biseo-ver3",
+  "version": "1.0.0",
+  "description": "담백스퀘어 대출비서 Pro",
+  "main": "web.js",
+  "scripts": {
+    "start": "node web.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "cors": "^2.8.5",
+    "@google/generative-ai": "^0.1.0",
+    "marked": "^9.1.2"
+  }
+}

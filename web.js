@@ -239,33 +239,36 @@ app.post('/api/issue', async (req, res) => {
     }
 });
 
-// AI 분석
+// [최종] 입력 데이터와 시스템 지침을 1:1로 강제 매칭하는 분석 로직
 app.post('/api/analyze', async (req, res) => {
     try {
         let { registryData, userInputs } = req.body;
         
-        // 면적 보정 로직 (배열/객체 대응)
+        // 1. 면적 보정 로직 (등기부 데이터에서 추출)
         const correctArea = extractExclusiveArea(Array.isArray(registryData) ? registryData : []);
         if (correctArea) userInputs.area = correctArea;
 
-        // [핵심 수정] AI에게 시스템 지침(System Instruction)의 템플릿을 강제함
+        // 2. AI에게 전달할 '데이터 명세서' 구성
+        // AI가 시스템 지침의 {소유자명}, {전체 주소} 등을 어디서 가져올지 정확히 지정해줍니다.
         const prompt = `
-            사용자가 입력한 아래 데이터를 바탕으로, 
-            반드시 시스템 지침(System Instruction)에 정의된 [최종 리포트 템플릿] 양식과 
-            구분선(────────────────────────), 줄바꿈 규칙을 사진 찍듯이 똑같이 복사하여 작성하십시오.
-            다른 설명이나 요약 문구는 일절 추가하지 마십시오.
+            반드시 시스템 지침(System Instruction)에 정의된 [최종 리포트 템플릿] 양식을 사진 찍듯이 그대로 유지하여 리포트를 작성하십시오. 
+            양식을 임의로 변경하거나 요약 설명을 덧붙이지 마십시오.
 
-            [데이터 데이터]
-            - KB시세: ${userInputs.kbPrice}만원
-            - 전용면적: ${userInputs.area}㎡
-            - 기대출 상세: ${JSON.stringify(userInputs.loans)}
-            - 등기부 데이터: ${JSON.stringify(registryData).substring(0, 8000)}
+            [리포트 작성용 데이터]
+            - 소유자명: ${userInputs.ownerName || '박순호'}
+            - 주소: ${userInputs.address || '입력된 주소 없음'}
+            - KB시세: ${userInputs.kbPrice}
+            - 전용면적: ${userInputs.area}
+            - 기대출 내역: ${JSON.stringify(userInputs.loans)}
+            - 등기부 원문 데이터: ${JSON.stringify(registryData).substring(0, 8000)}
+
+            위 데이터를 기반으로 모든 [케이스1~6]의 한도와 금리를 계산하여 리포트를 완성하십시오.
         `;
 
         const result = await model.generateContent(prompt);
         res.json({ success: true, analysis: result.response.text() });
     } catch (e) { 
-        console.error("AI 분석 에러:", e);
+        console.error("AI 리포트 생성 중 오류:", e);
         res.status(500).json({ success: false }); 
     }
 });
